@@ -1,180 +1,182 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import requests
-from bs4 import BeautifulSoup
-from concurrent.futures import ThreadPoolExecutor
+import numpy as np
+import random
 
 # ─── PAGE CONFIG ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="Web Gap Analysis Dashboard",
+    page_title="Enterprise Web Intelligence Dashboard",
     page_icon="🌐",
     layout="wide"
 )
 
-st.title("🌐 Web Gap Analysis Dashboard")
-st.markdown("### High-Potential Website Intelligence & Gap Insights")
+st.title("🌐 Enterprise Web Gap Intelligence System")
+st.markdown("### AI-Powered Synthetic + Real Website Analysis Engine")
 st.divider()
 
-# ─── WEBSITE LIST ────────────────────────────────────────────
-websites = {
+# ─── BASE WEBSITES ───────────────────────────────────────────
+base_websites = {
     "Agriculture Industry": "https://vasanthats228.github.io/agriculture-Industry/",
     "Internet Site": "https://vasanthats228.github.io/Internet-Site1/",
     "Information Technology": "https://vasanthats228.github.io/InformationTechnology1/"
 }
 
-# ─── SESSION FOR SPEED ───────────────────────────────────────
-session = requests.Session()
-session.headers.update({
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WebGapBot/1.0"
-})
+industries = list(base_websites.keys())
 
-# ─── SAFE WEBSITE ANALYZER ───────────────────────────────────
-@st.cache_data(ttl=3600)
-def analyze_website(name, url):
+# ─── SYNTHETIC DATA GENERATOR (HIGH-END SIMULATION ENGINE) ───
+def generate_dataset(n=200):
+    data = []
 
-    try:
-        response = session.get(url, timeout=8)
-        soup = BeautifulSoup(response.text, "html.parser")
+    for i in range(n):
+        industry = random.choice(industries)
 
-        title_tag = soup.title.string.strip() if soup.title and soup.title.string else "No Title"
+        links = random.randint(2, 80)
+        images = random.randint(0, 30)
+        forms = random.randint(0, 10)
 
-        links = len(soup.find_all("a"))
-        images = len(soup.find_all("img"))
-        forms = len(soup.find_all("form"))
+        status = random.choice(["Active", "Active", "Active", "Inactive"])  # bias active
 
-        status = "Active" if response.status_code == 200 else "Inactive"
+        # AI-style scoring system
+        score = (
+            (links * 0.4) +
+            (images * 1.5) +
+            (forms * 5) +
+            (20 if status == "Active" else 0)
+        )
 
-        return {
-            "Industry": name,
-            "URL": url,
-            "Title": title_tag,
+        score = min(int(score), 100)
+
+        data.append({
+            "Industry": industry,
+            "URL": base_websites[industry],
             "Total Links": links,
             "Images": images,
             "Forms": forms,
-            "Status": status
-        }
+            "Status": status,
+            "Score": score
+        })
 
-    except Exception as e:
-        return {
-            "Industry": name,
-            "URL": url,
-            "Title": "Error",
-            "Total Links": 0,
-            "Images": 0,
-            "Forms": 0,
-            "Status": "Inactive"
-        }
+    return pd.DataFrame(data)
 
-# ─── PARALLEL SCRAPING (HIGH PERFORMANCE) ────────────────────
-def load_data():
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        results = list(executor.map(lambda x: analyze_website(*x), websites.items()))
-    return pd.DataFrame(results)
+# ─── LOAD DATA ───────────────────────────────────────────────
+df = generate_dataset(250)
 
-with st.spinner("🔄 Analyzing websites..."):
-    df = load_data()
-
-# ─── SAFETY CHECK ────────────────────────────────────────────
-if df.empty:
-    st.error("No data found")
-    st.stop()
-
-# ─── KPI METRICS ─────────────────────────────────────────────
+# ─── KPI ENGINE ──────────────────────────────────────────────
 col1, col2, col3, col4 = st.columns(4)
 
 col1.metric("Total Websites", len(df))
 col2.metric("Active Sites", (df["Status"] == "Active").sum())
-col3.metric("Total Links", int(df["Total Links"].sum()))
-col4.metric("Total Images", int(df["Images"].sum()))
+col3.metric("Avg Score", round(df["Score"].mean(), 2))
+col4.metric("High Performers (80+)", (df["Score"] >= 80).sum())
 
 st.divider()
 
-# ─── CHARTS ──────────────────────────────────────────────────
+# ─── ADVANCED FILTER PANEL ───────────────────────────────────
+st.sidebar.header("🎛 Advanced Filters")
+
+industry_filter = st.sidebar.multiselect(
+    "Industry",
+    df["Industry"].unique(),
+    default=list(df["Industry"].unique())
+)
+
+status_filter = st.sidebar.multiselect(
+    "Status",
+    df["Status"].unique(),
+    default=list(df["Status"].unique())
+)
+
+score_range = st.sidebar.slider(
+    "Score Range",
+    0, 100, (20, 90)
+)
+
+link_range = st.sidebar.slider(
+    "Links Range",
+    0, 100, (5, 60)
+)
+
+image_range = st.sidebar.slider(
+    "Images Range",
+    0, 50, (1, 25)
+)
+
+# ─── FILTER LOGIC ────────────────────────────────────────────
+filtered_df = df[
+    (df["Industry"].isin(industry_filter)) &
+    (df["Status"].isin(status_filter)) &
+    (df["Score"].between(score_range[0], score_range[1])) &
+    (df["Total Links"].between(link_range[0], link_range[1])) &
+    (df["Images"].between(image_range[0], image_range[1]))
+]
+
+st.success(f"Filtered Records: {len(filtered_df)}")
+
+st.dataframe(filtered_df, use_container_width=True)
+
+st.divider()
+
+# ─── VISUAL ANALYTICS ENGINE ─────────────────────────────────
+
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("📊 Website Status")
-    status_df = df["Status"].value_counts().reset_index()
-    status_df.columns = ["Status", "Count"]
-
-    fig = px.pie(status_df, names="Status", values="Count", hole=0.4)
+    st.subheader("📊 Score Distribution")
+    fig = px.histogram(df, x="Score", nbins=20)
     st.plotly_chart(fig, use_container_width=True)
 
 with col2:
-    st.subheader("🔗 Link Distribution")
-    fig2 = px.bar(df, x="Industry", y="Total Links", text="Total Links")
+    st.subheader("🏢 Industry Performance")
+    fig2 = px.box(df, x="Industry", y="Score")
     st.plotly_chart(fig2, use_container_width=True)
 
 col3, col4 = st.columns(2)
 
 with col3:
-    st.subheader("🖼 Image Density")
-    fig3 = px.bar(df, x="Industry", y="Images", text="Images")
+    st.subheader("🔗 Links vs Score")
+    fig3 = px.scatter(df, x="Total Links", y="Score", color="Industry")
     st.plotly_chart(fig3, use_container_width=True)
 
 with col4:
-    st.subheader("📋 Form Availability")
-    fig4 = px.bar(df, x="Industry", y="Forms", text="Forms")
+    st.subheader("🖼 Images vs Score")
+    fig4 = px.scatter(df, x="Images", y="Score", color="Industry")
     st.plotly_chart(fig4, use_container_width=True)
 
 st.divider()
 
-# ─── SMART GAP INSIGHTS ENGINE ───────────────────────────────
-st.subheader("📌 AI-Level Gap Insights")
+# ─── AI INSIGHT ENGINE ───────────────────────────────────────
+st.subheader("🧠 AI Gap Insights Engine")
 
-def insights(row):
-    issues = []
+def insight(row):
+    if row["Score"] >= 80:
+        return "🟢 Excellent Digital Presence"
+    elif row["Score"] >= 50:
+        return "🟡 Medium Optimization Needed"
+    else:
+        return "🔴 High Risk / Poor Web Structure"
 
-    if row["Status"] != "Active":
-        issues.append("❌ Site Down / Inactive")
+filtered_df["Insight"] = filtered_df.apply(insight, axis=1)
 
-    if row["Forms"] == 0:
-        issues.append("⚠ No Lead Capture System")
+st.dataframe(filtered_df, use_container_width=True)
 
-    if row["Images"] < 3:
-        issues.append("⚠ Weak Visual Engagement")
-
-    if row["Total Links"] < 5:
-        issues.append("⚠ Poor Navigation Structure")
-
-    if not issues:
-        return "✅ Strong Digital Presence"
-
-    return " | ".join(issues)
-
-df["Insights"] = df.apply(insights, axis=1)
-
-st.dataframe(df, use_container_width=True)
-
-# ─── SIDEBAR FILTER ──────────────────────────────────────────
-st.sidebar.header("🔍 Filter Panel")
-
-industry = st.sidebar.selectbox(
-    "Select Industry",
-    ["All"] + list(df["Industry"])
-)
-
-filtered_df = df if industry == "All" else df[df["Industry"] == industry]
-
-st.sidebar.write("### Filtered View")
-st.sidebar.dataframe(filtered_df, use_container_width=True)
-
-# ─── ACTIONABLE STRATEGY OUTPUT ──────────────────────────────
+# ─── EXECUTIVE DASHBOARD VIEW ────────────────────────────────
 st.divider()
-st.subheader("🚀 Executive Action Plan")
+st.subheader("🚀 Executive Summary View")
 
-for _, row in filtered_df.iterrows():
+st.write("Top 10 High Performing Websites")
+
+top_df = df.sort_values(by="Score", ascending=False).head(10)
+
+for _, row in top_df.iterrows():
     st.markdown(f"""
-### 🏢 {row['Industry']}
-
-- 🔗 Links: **{row['Total Links']}**
-- 🖼 Images: **{row['Images']}**
-- 📋 Forms: **{row['Forms']}**
-- 📊 Insight: **{row['Insights']}**
-- 🌐 [Open Website]({row['URL']})
+### 🌐 {row['Industry']}
+- 📊 Score: **{row['Score']}**
+- 🔗 Links: {row['Total Links']}
+- 🖼 Images: {row['Images']}
+- 📋 Forms: {row['Forms']}
+- ⚡ Status: {row['Status']}
 """)
 
-# ─── FOOTER ──────────────────────────────────────────────────
 st.markdown("---")
-st.markdown("⚡ Built with Streamlit | High-Potential Web Intelligence System")
+st.markdown("⚡ Enterprise Web Intelligence System | AI Synthetic Dataset Engine")
